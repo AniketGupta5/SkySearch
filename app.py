@@ -2,7 +2,7 @@ import streamlit as st
 import requests
 import json
 import re
-from datetime import date, timedelta, datetime
+from datetime import date, timedelta
 
 # ── Page config ────────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -12,11 +12,257 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
-# ── Custom CSS ─────────────────────────────────────────────────────────────────
+# ── Translations ───────────────────────────────────────────────────────────────
+TRANSLATIONS = {
+    "English": {
+        "hero_title": "✈ SkySearch",
+        "hero_sub": "AI-powered flight explorer — search routes across 400+ airlines. Powered by Groq & Llama 3.3.",
+        "api_key_header": "### 🔑 Groq API Key",
+        "api_key_caption": "Get a free key at [console.groq.com](https://console.groq.com)",
+        "api_key_placeholder": "gsk_...",
+        "model_label": "**Model:** Llama 3.3 70B Versatile",
+        "model_caption": "Free tier · No credit card needed",
+        "quick_route": "✈ Quick route picker",
+        "currency_label": "Currency",
+        "cabin_label": "Cabin class",
+        "from_label": "From (IATA)",
+        "to_label": "To (IATA)",
+        "from_placeholder": "e.g. HYD",
+        "to_placeholder": "e.g. DXB",
+        "date_label": "Departure date",
+        "passengers_label": "Passengers",
+        "search_btn": "🔍  Search Flights with AI",
+        "sort_label": "Sort by",
+        "sort_price": "💰 Price (low → high)",
+        "sort_duration": "⏱ Duration (shortest first)",
+        "sort_depart": "🛫 Departure time",
+        "stat_found": "Flights found",
+        "stat_cheapest": "Cheapest fare",
+        "stat_expensive": "Most expensive",
+        "stat_avg": "Average price",
+        "ai_badge": "🤖 Groq AI Recommendation",
+        "nonstop": "Nonstop",
+        "stop": "stop",
+        "stops": "stops",
+        "via_label": "via",
+        "refundable": "Refundable",
+        "non_refundable": "Non-refundable",
+        "per_person": "per person",
+        "pax": "pax",
+        "next_day": "+1 day",
+        "spinner_flights": "✈ Groq AI is finding flights...",
+        "spinner_rec": "🤖 Getting AI recommendation...",
+        "err_no_key": "⚠️ Please enter your Groq API Key in the sidebar.",
+        "err_no_iata": "⚠️ Please enter both origin and destination IATA codes.",
+        "err_iata_len": "⚠️ IATA codes are exactly 3 letters (e.g. HYD, DXB, LHR).",
+        "err_same": "⚠️ Origin and destination cannot be the same.",
+        "footer": "SkySearch · Built with Streamlit + Groq AI · Hackathon 2026",
+        "powered": "⚡ Powered by Groq (Llama 3.3 70B) · Results are AI-generated for informational purposes",
+        "flights_heading": "Flights",
+        "language_label": "🌐 Language / भाषा / భాష",
+        "cabin_options": ["ECONOMY", "PREMIUM_ECONOMY", "BUSINESS", "FIRST"],
+        "rec_prompt": "Which is best value and which is best for comfort? Be brief. Reply in English.",
+    },
+    "हिंदी": {
+        "hero_title": "✈ स्काईसर्च",
+        "hero_sub": "AI-संचालित फ्लाइट एक्सप्लोरर — 400+ एयरलाइंस में रूट खोजें। Groq और Llama 3.3 द्वारा संचालित।",
+        "api_key_header": "### 🔑 Groq API कुंजी",
+        "api_key_caption": "[console.groq.com](https://console.groq.com) पर मुफ्त कुंजी पाएं",
+        "api_key_placeholder": "gsk_...",
+        "model_label": "**मॉडल:** Llama 3.3 70B Versatile",
+        "model_caption": "मुफ्त · कोई क्रेडिट कार्ड नहीं",
+        "quick_route": "✈ त्वरित रूट चुनें",
+        "currency_label": "मुद्रा",
+        "cabin_label": "केबिन श्रेणी",
+        "from_label": "से (IATA कोड)",
+        "to_label": "तक (IATA कोड)",
+        "from_placeholder": "जैसे HYD",
+        "to_placeholder": "जैसे DXB",
+        "date_label": "प्रस्थान तिथि",
+        "passengers_label": "यात्री",
+        "search_btn": "🔍  AI से फ्लाइट खोजें",
+        "sort_label": "क्रमबद्ध करें",
+        "sort_price": "💰 मूल्य (कम → अधिक)",
+        "sort_duration": "⏱ अवधि (सबसे कम पहले)",
+        "sort_depart": "🛫 प्रस्थान समय",
+        "stat_found": "फ्लाइट मिली",
+        "stat_cheapest": "सबसे सस्ता किराया",
+        "stat_expensive": "सबसे महंगा",
+        "stat_avg": "औसत मूल्य",
+        "ai_badge": "🤖 Groq AI सुझाव",
+        "nonstop": "सीधी उड़ान",
+        "stop": "स्टॉप",
+        "stops": "स्टॉप",
+        "via_label": "होते हुए",
+        "refundable": "वापसी योग्य",
+        "non_refundable": "वापसी योग्य नहीं",
+        "per_person": "प्रति व्यक्ति",
+        "pax": "यात्री",
+        "next_day": "+1 दिन",
+        "spinner_flights": "✈ Groq AI फ्लाइट खोज रहा है...",
+        "spinner_rec": "🤖 AI सुझाव प्राप्त हो रहा है...",
+        "err_no_key": "⚠️ कृपया साइडबार में अपनी Groq API कुंजी दर्ज करें।",
+        "err_no_iata": "⚠️ कृपया स्रोत और गंतव्य दोनों IATA कोड दर्ज करें।",
+        "err_iata_len": "⚠️ IATA कोड ठीक 3 अक्षर के होते हैं (जैसे HYD, DXB, LHR)।",
+        "err_same": "⚠️ स्रोत और गंतव्य एक समान नहीं हो सकते।",
+        "footer": "स्काईसर्च · Streamlit + Groq AI के साथ बनाया गया · हैकाथॉन 2026",
+        "powered": "⚡ Groq (Llama 3.3 70B) द्वारा संचालित · परिणाम AI-जनित हैं",
+        "flights_heading": "फ्लाइट",
+        "language_label": "🌐 Language / भाषा / భాష",
+        "cabin_options": ["इकोनॉमी", "प्रीमियम इकोनॉमी", "बिज़नेस", "फर्स्ट"],
+        "cabin_api_map": {"इकोनॉमी": "ECONOMY", "प्रीमियम इकोनॉमी": "PREMIUM_ECONOMY", "बिज़नेस": "BUSINESS", "फर्स्ट": "FIRST"},
+        "rec_prompt": "Which is best value and which is best for comfort? Be brief. Reply in Hindi (Devanagari script).",
+    },
+    "తెలుగు": {
+        "hero_title": "✈ స్కైసెర్చ్",
+        "hero_sub": "AI-ఆధారిత విమాన అన్వేషకుడు — 400+ ఎయిర్‌లైన్లలో మార్గాలు వెతకండి. Groq మరియు Llama 3.3 ద్వారా.",
+        "api_key_header": "### 🔑 Groq API కీ",
+        "api_key_caption": "[console.groq.com](https://console.groq.com) వద్ద ఉచిత కీ పొందండి",
+        "api_key_placeholder": "gsk_...",
+        "model_label": "**మోడల్:** Llama 3.3 70B Versatile",
+        "model_caption": "ఉచిత · క్రెడిట్ కార్డు అవసరం లేదు",
+        "quick_route": "✈ త్వరిత మార్గం ఎంచుకోండి",
+        "currency_label": "కరెన్సీ",
+        "cabin_label": "క్యాబిన్ తరగతి",
+        "from_label": "నుండి (IATA కోడ్)",
+        "to_label": "వరకు (IATA కోడ్)",
+        "from_placeholder": "ఉదా: HYD",
+        "to_placeholder": "ఉదా: DXB",
+        "date_label": "బయలుదేరే తేదీ",
+        "passengers_label": "ప్రయాణికులు",
+        "search_btn": "🔍  AI తో విమానాలు వెతకండి",
+        "sort_label": "క్రమపరచండి",
+        "sort_price": "💰 ధర (తక్కువ → ఎక్కువ)",
+        "sort_duration": "⏱ వ్యవధి (తక్కువ మొదట)",
+        "sort_depart": "🛫 బయలుదేరే సమయం",
+        "stat_found": "విమానాలు దొరికాయి",
+        "stat_cheapest": "అత్యంత చౌకైన చార్జీ",
+        "stat_expensive": "అత్యంత ఖరీదైన",
+        "stat_avg": "సగటు ధర",
+        "ai_badge": "🤖 Groq AI సూచన",
+        "nonstop": "నేరుగా",
+        "stop": "స్టాప్",
+        "stops": "స్టాప్‌లు",
+        "via_label": "మీదుగా",
+        "refundable": "రీఫండ్ అవుతుంది",
+        "non_refundable": "రీఫండ్ కాదు",
+        "per_person": "తలసరి",
+        "pax": "ప్రయాణికులు",
+        "next_day": "+1 రోజు",
+        "spinner_flights": "✈ Groq AI విమానాలు వెతుకుతోంది...",
+        "spinner_rec": "🤖 AI సూచన వస్తోంది...",
+        "err_no_key": "⚠️ దయచేసి సైడ్‌బార్‌లో మీ Groq API కీని నమోదు చేయండి.",
+        "err_no_iata": "⚠️ దయచేసి మూలం మరియు గమ్యం రెండు IATA కోడ్‌లు నమోదు చేయండి.",
+        "err_iata_len": "⚠️ IATA కోడ్‌లు సరిగ్గా 3 అక్షరాలు (ఉదా: HYD, DXB, LHR).",
+        "err_same": "⚠️ మూలం మరియు గమ్యం ఒకే విమానాశ్రయం కాకూడదు.",
+        "footer": "స్కైసెర్చ్ · Streamlit + Groq AI తో నిర్మించబడింది · హ్యాకథాన్ 2026",
+        "powered": "⚡ Groq (Llama 3.3 70B) ద్వారా · ఫలితాలు AI-రూపొందించబడినవి",
+        "flights_heading": "విమానాలు",
+        "language_label": "🌐 Language / భాషా / భాష",
+        "cabin_options": ["ఎకానమీ", "ప్రీమియం ఎకానమీ", "బిజినెస్", "ఫస్ట్"],
+        "cabin_api_map": {"ఎకానమీ": "ECONOMY", "ప్రీమియం ఎకానమీ": "PREMIUM_ECONOMY", "బిజినెస్": "BUSINESS", "ఫస్ట్": "FIRST"},
+        "rec_prompt": "Which is best value and which is best for comfort? Be brief. Reply in Telugu script.",
+    },
+}
+
+# ── Groq API ───────────────────────────────────────────────────────────────────
+def call_groq(api_key, prompt, system_prompt, max_tokens=3000):
+    headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+    body = {
+        "model": "llama-3.3-70b-versatile",
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user",   "content": prompt},
+        ],
+        "temperature": 0.7,
+        "max_tokens": max_tokens,
+    }
+    r = requests.post("https://api.groq.com/openai/v1/chat/completions", headers=headers, json=body, timeout=30)
+    if r.status_code == 200:
+        return r.json()["choices"][0]["message"]["content"]
+    raise Exception(f"Groq API error {r.status_code}: {r.text[:300]}")
+
+
+def generate_flights(api_key, origin, destination, depart_date, adults, cabin, currency):
+    prompt = f"""
+Generate exactly 10 realistic flight options from {origin} to {destination}
+on {depart_date} for {adults} adult(s) in {cabin} class. Currency: {currency}.
+
+Use real airlines that actually fly this route. Include a mix of nonstop and 1-stop flights.
+Make prices, durations, and times realistic for this route.
+
+Return a JSON array of 10 objects, each with exactly these fields:
+- airline: string (full airline name)
+- airline_code: string (2-letter IATA)
+- flight_number: string (e.g. EK512)
+- departure_time: string HH:MM
+- arrival_time: string HH:MM
+- arrival_date_offset: integer 0 or 1
+- duration: string (e.g. "2h 30m")
+- stops: integer 0 or 1
+- via: string (layover airport code, empty string if nonstop)
+- price: integer (in {currency})
+- aircraft: string
+- baggage: string (e.g. "23kg included")
+- meal: string (e.g. "Meal included")
+- refundable: boolean
+
+Return ONLY the JSON array, nothing else.
+"""
+    raw = call_groq(api_key, prompt,
+                    system_prompt="You are a flight data engine. Always respond with valid JSON only. No explanation, no markdown fences, no extra text — pure JSON array.").strip()
+    raw = re.sub(r"^```[a-z]*\n?", "", raw)
+    raw = re.sub(r"\n?```$", "", raw)
+    return json.loads(raw)
+
+
+def get_recommendation(api_key, flights, origin, destination, cabin, rec_prompt):
+    summary = json.dumps([
+        {"airline": f["airline"], "price": f["price"], "duration": f["duration"], "stops": f["stops"]}
+        for f in flights[:6]
+    ])
+    prompt = f"Flights from {origin} to {destination} in {cabin}: {summary}. {rec_prompt}"
+    return call_groq(api_key, prompt,
+                     system_prompt="You are a friendly travel advisor. Be concise, max 2-3 sentences.",
+                     max_tokens=200)
+
+
+# ── Static data ────────────────────────────────────────────────────────────────
+POPULAR = {
+    "— type your own —":       ("", ""),
+    "Hyderabad → Dubai":       ("HYD", "DXB"),
+    "Mumbai → London":         ("BOM", "LHR"),
+    "Delhi → Singapore":       ("DEL", "SIN"),
+    "Bangalore → New York":    ("BLR", "JFK"),
+    "Chennai → Kuala Lumpur":  ("MAA", "KUL"),
+    "Hyderabad → London":      ("HYD", "LHR"),
+    "Delhi → Dubai":           ("DEL", "DXB"),
+    "Mumbai → New York":       ("BOM", "JFK"),
+    "New York → London":       ("JFK", "LHR"),
+    "Los Angeles → Tokyo":     ("LAX", "NRT"),
+}
+
+CURRENCY_MAP = {
+    "USD 🇺🇸": "USD", "INR 🇮🇳": "INR", "EUR 🇪🇺": "EUR",
+    "GBP 🇬🇧": "GBP", "AED 🇦🇪": "AED", "SGD 🇸🇬": "SGD",
+}
+
+IATA_HINT = {
+    "HYD":"Hyderabad","DEL":"Delhi","BOM":"Mumbai","BLR":"Bangalore",
+    "MAA":"Chennai","CCU":"Kolkata","GOI":"Goa","AMD":"Ahmedabad",
+    "DXB":"Dubai","LHR":"London","JFK":"New York","SIN":"Singapore",
+    "NRT":"Tokyo","CDG":"Paris","FRA":"Frankfurt","AMS":"Amsterdam",
+    "DFW":"Dallas","LAX":"Los Angeles","KUL":"Kuala Lumpur",
+    "SYD":"Sydney","AUH":"Abu Dhabi","DOH":"Doha","IST":"Istanbul",
+}
+
+# ── CSS ────────────────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-  html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;600&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Telugu:wght@400;600&display=swap');
+  html, body, [class*="css"] { font-family: 'Inter', 'Noto Sans Devanagari', 'Noto Sans Telugu', sans-serif; }
   .stApp { background: #0b1120; color: #e2e8f0; }
   .hero {
     background: linear-gradient(135deg, #0f2144 0%, #1a3a6e 50%, #0f2144 100%);
@@ -50,6 +296,7 @@ st.markdown("""
   .stat-value { font-size: 1.4rem; font-weight: 700; color: #60a5fa; }
   .stat-desc  { font-size: 0.75rem; color: #64748b; margin-top: 2px; }
   .ai-badge { background: #312e81; color: #a5b4fc; border-radius: 8px; padding: 3px 10px; font-size: 0.75rem; font-weight: 500; display: inline-block; margin-bottom: 8px; }
+  .lang-pill { display: inline-block; padding: 4px 14px; border-radius: 20px; font-size: 0.82rem; font-weight: 500; cursor: pointer; }
   .stSelectbox > div > div   { background: #1e293b !important; border-color: #334155 !important; color: #e2e8f0 !important; border-radius: 10px !important; }
   .stDateInput > div > div > input { background: #1e293b !important; border-color: #334155 !important; color: #e2e8f0 !important; border-radius: 10px !important; }
   .stNumberInput > div > div > input { background: #1e293b !important; border-color: #334155 !important; color: #e2e8f0 !important; }
@@ -57,169 +304,83 @@ st.markdown("""
   label { color: #94a3b8 !important; font-size: 0.85rem !important; font-weight: 500 !important; }
   .stButton > button { background: linear-gradient(135deg, #2563eb, #1d4ed8) !important; color: white !important; border: none !important; border-radius: 12px !important; padding: 0.7rem 2rem !important; font-weight: 600 !important; font-size: 1rem !important; width: 100% !important; }
   .stButton > button:hover { opacity: 0.9 !important; }
+  .stRadio > div { flex-direction: row !important; gap: 12px; }
+  .stRadio label { font-size: 1rem !important; }
 </style>
 """, unsafe_allow_html=True)
 
+# ── Language selector (sidebar top) ───────────────────────────────────────────
+with st.sidebar:
+    lang = st.radio(
+        "🌐 Language / भाषा / భాష",
+        options=["English", "हिंदी", "తెలుగు"],
+        horizontal=True,
+        key="lang_select",
+    )
 
-# ── Groq API ───────────────────────────────────────────────────────────────────
-def call_groq(api_key, prompt, model="llama-3.3-70b-versatile"):
-    headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
-    body = {
-        "model": model,
-        "messages": [
-            {"role": "system", "content": "You are a flight data engine. Always respond with valid JSON only. No explanation, no markdown fences, no extra text — pure JSON array."},
-            {"role": "user", "content": prompt},
-        ],
-        "temperature": 0.7,
-        "max_tokens": 3000,
-    }
-    r = requests.post("https://api.groq.com/openai/v1/chat/completions", headers=headers, json=body, timeout=30)
-    if r.status_code == 200:
-        return r.json()["choices"][0]["message"]["content"]
-    raise Exception(f"Groq API error {r.status_code}: {r.text[:300]}")
+T = TRANSLATIONS[lang]
 
-
-def generate_flights(api_key, origin, destination, depart_date, adults, cabin, currency):
-    prompt = f"""
-Generate exactly 10 realistic flight options from {origin} to {destination}
-on {depart_date} for {adults} adult(s) in {cabin} class. Currency: {currency}.
-
-Use real airlines that actually fly this route. Include a mix of nonstop and 1-stop flights.
-Make prices, durations, and times realistic for this route.
-
-Return a JSON array of 10 objects, each with exactly these fields:
-- airline: string (full airline name)
-- airline_code: string (2-letter IATA)
-- flight_number: string (e.g. EK512)
-- departure_time: string HH:MM
-- arrival_time: string HH:MM
-- arrival_date_offset: integer 0 or 1
-- duration: string (e.g. "2h 30m")
-- stops: integer 0 or 1
-- via: string (layover airport code, empty string if nonstop)
-- price: integer
-- aircraft: string
-- baggage: string (e.g. "23kg included")
-- meal: string (e.g. "Meal included")
-- refundable: boolean
-
-Return ONLY the JSON array, nothing else.
-"""
-    raw = call_groq(api_key, prompt).strip()
-    raw = re.sub(r"^```[a-z]*\n?", "", raw)
-    raw = re.sub(r"\n?```$", "", raw)
-    return json.loads(raw)
-
-
-def get_recommendation(api_key, flights, origin, destination, cabin):
-    summary = json.dumps([
-        {"airline": f["airline"], "price": f["price"], "duration": f["duration"], "stops": f["stops"]}
-        for f in flights[:6]
-    ])
-    headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
-    body = {
-        "model": "llama-3.3-70b-versatile",
-        "messages": [
-            {"role": "system", "content": "You are a friendly travel advisor. Be concise, max 2-3 sentences."},
-            {"role": "user", "content": f"Flights from {origin} to {destination} in {cabin}: {summary}. Which is best value and which is best for comfort? Be brief."},
-        ],
-        "temperature": 0.6,
-        "max_tokens": 150,
-    }
-    r = requests.post("https://api.groq.com/openai/v1/chat/completions", headers=headers, json=body, timeout=20)
-    if r.status_code == 200:
-        return r.json()["choices"][0]["message"]["content"]
-    return ""
-
-
-# ── Data ───────────────────────────────────────────────────────────────────────
-POPULAR = {
-    "— type your own —":       ("", ""),
-    "Hyderabad → Dubai":       ("HYD", "DXB"),
-    "Mumbai → London":         ("BOM", "LHR"),
-    "Delhi → Singapore":       ("DEL", "SIN"),
-    "Bangalore → New York":    ("BLR", "JFK"),
-    "Chennai → Kuala Lumpur":  ("MAA", "KUL"),
-    "Hyderabad → London":      ("HYD", "LHR"),
-    "Delhi → Dubai":           ("DEL", "DXB"),
-    "Mumbai → New York":       ("BOM", "JFK"),
-    "New York → London":       ("JFK", "LHR"),
-    "Los Angeles → Tokyo":     ("LAX", "NRT"),
-}
-
-CURRENCY_MAP = {
-    "USD 🇺🇸": "USD", "INR 🇮🇳": "INR", "EUR 🇪🇺": "EUR",
-    "GBP 🇬🇧": "GBP", "AED 🇦🇪": "AED", "SGD 🇸🇬": "SGD",
-}
-
-IATA_HINT = {
-    "HYD":"Hyderabad","DEL":"Delhi","BOM":"Mumbai","BLR":"Bangalore",
-    "MAA":"Chennai","CCU":"Kolkata","GOI":"Goa","AMD":"Ahmedabad",
-    "DXB":"Dubai","LHR":"London","JFK":"New York","SIN":"Singapore",
-    "NRT":"Tokyo","CDG":"Paris","FRA":"Frankfurt","AMS":"Amsterdam",
-    "DFW":"Dallas","LAX":"Los Angeles","KUL":"Kuala Lumpur",
-    "SYD":"Sydney","AUH":"Abu Dhabi","DOH":"Doha","IST":"Istanbul",
-}
-
-
-# ── UI ─────────────────────────────────────────────────────────────────────────
-st.markdown("""
+# ── Hero ───────────────────────────────────────────────────────────────────────
+st.markdown(f"""
 <div class="hero">
-  <h1>&#x2708; SkySearch</h1>
-  <p>AI-powered flight explorer &mdash; search routes across 400+ airlines. Powered by Groq &amp; Llama 3.3.</p>
+  <h1>{T['hero_title']}</h1>
+  <p>{T['hero_sub']}</p>
 </div>
 """, unsafe_allow_html=True)
 
+# ── Sidebar rest ───────────────────────────────────────────────────────────────
 with st.sidebar:
-    st.markdown("### 🔑 Groq API Key")
-    st.caption("Get a free key at [console.groq.com](https://console.groq.com)")
-    api_key = st.text_input("Groq API Key", type="password", placeholder="gsk_...")
+    st.markdown(T["api_key_header"])
+    st.caption(T["api_key_caption"])
+    api_key = st.text_input("Groq API Key", type="password", placeholder=T["api_key_placeholder"], label_visibility="collapsed")
     st.divider()
-    st.markdown("**Model:** Llama 3.3 70B Versatile")
-    st.caption("Free tier · No credit card needed")
+    st.markdown(T["model_label"])
+    st.caption(T["model_caption"])
 
+# ── Search form ────────────────────────────────────────────────────────────────
 st.markdown('<div class="search-card">', unsafe_allow_html=True)
 r1c1, r1c2, r1c3 = st.columns([2, 1, 1])
 with r1c1:
-    quick = st.selectbox("✈ Quick route picker", list(POPULAR.keys()))
+    quick = st.selectbox(T["quick_route"], list(POPULAR.keys()))
 with r1c2:
-    currency_label = st.selectbox("Currency", list(CURRENCY_MAP.keys()))
+    currency_label = st.selectbox(T["currency_label"], list(CURRENCY_MAP.keys()))
     currency = CURRENCY_MAP[currency_label]
 with r1c3:
-    cabin = st.selectbox("Cabin class", ["ECONOMY", "PREMIUM_ECONOMY", "BUSINESS", "FIRST"])
+    cabin_display = st.selectbox(T["cabin_label"], T["cabin_options"])
+    # Map localized cabin label back to API value
+    cabin = T.get("cabin_api_map", {}).get(cabin_display, cabin_display)
 
 default_o, default_d = POPULAR[quick]
 c1, c2, c3, c4 = st.columns([1.2, 1.2, 1.1, 0.7])
 with c1:
-    origin = st.text_input("From (IATA)", value=default_o, placeholder="e.g. HYD").strip().upper()
+    origin = st.text_input(T["from_label"], value=default_o, placeholder=T["from_placeholder"]).strip().upper()
 with c2:
-    destination = st.text_input("To (IATA)", value=default_d, placeholder="e.g. DXB").strip().upper()
+    destination = st.text_input(T["to_label"], value=default_d, placeholder=T["to_placeholder"]).strip().upper()
 with c3:
-    depart_date = st.date_input("Departure date", value=date.today() + timedelta(days=7), min_value=date.today())
+    depart_date = st.date_input(T["date_label"], value=date.today() + timedelta(days=7), min_value=date.today())
 with c4:
-    adults = st.number_input("Passengers", min_value=1, max_value=9, value=1)
+    adults = st.number_input(T["passengers_label"], min_value=1, max_value=9, value=1)
 
 if origin and destination:
-    ho = IATA_HINT.get(origin, "Unknown")
-    hd = IATA_HINT.get(destination, "Unknown")
+    ho = IATA_HINT.get(origin, "?")
+    hd = IATA_HINT.get(destination, "?")
     st.caption(f"📍 {origin} = {ho}   →   {destination} = {hd}")
 
-search_clicked = st.button("🔍  Search Flights with AI")
+search_clicked = st.button(T["search_btn"])
 st.markdown('</div>', unsafe_allow_html=True)
-
 
 # ── Results ────────────────────────────────────────────────────────────────────
 if search_clicked:
     if not api_key:
-        st.error("⚠️ Please enter your Groq API Key in the sidebar.")
+        st.error(T["err_no_key"])
     elif not origin or not destination:
-        st.error("⚠️ Please enter both origin and destination IATA codes.")
+        st.error(T["err_no_iata"])
     elif len(origin) != 3 or len(destination) != 3:
-        st.error("⚠️ IATA codes are exactly 3 letters (e.g. HYD, DXB, LHR).")
+        st.error(T["err_iata_len"])
     elif origin == destination:
-        st.error("⚠️ Origin and destination cannot be the same.")
+        st.error(T["err_same"])
     else:
-        with st.spinner("✈ Groq AI is finding flights..."):
+        with st.spinner(T["spinner_flights"]):
             try:
                 flights = generate_flights(api_key, origin, destination,
                                            depart_date.strftime("%Y-%m-%d"),
@@ -232,22 +393,22 @@ if search_clicked:
         st.markdown("---")
         s1, s2, s3, s4 = st.columns(4)
         with s1:
-            st.markdown(f'<div class="stat-pill"><div class="stat-value">{len(flights)}</div><div class="stat-desc">Flights found</div></div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="stat-pill"><div class="stat-value">{len(flights)}</div><div class="stat-desc">{T["stat_found"]}</div></div>', unsafe_allow_html=True)
         with s2:
-            st.markdown(f'<div class="stat-pill"><div class="stat-value">{currency} {min(prices):,}</div><div class="stat-desc">Cheapest fare</div></div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="stat-pill"><div class="stat-value">{currency} {min(prices):,}</div><div class="stat-desc">{T["stat_cheapest"]}</div></div>', unsafe_allow_html=True)
         with s3:
-            st.markdown(f'<div class="stat-pill"><div class="stat-value">{currency} {max(prices):,}</div><div class="stat-desc">Most expensive</div></div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="stat-pill"><div class="stat-value">{currency} {max(prices):,}</div><div class="stat-desc">{T["stat_expensive"]}</div></div>', unsafe_allow_html=True)
         with s4:
             avg = int(sum(prices) / len(prices))
-            st.markdown(f'<div class="stat-pill"><div class="stat-value">{currency} {avg:,}</div><div class="stat-desc">Average price</div></div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="stat-pill"><div class="stat-value">{currency} {avg:,}</div><div class="stat-desc">{T["stat_avg"]}</div></div>', unsafe_allow_html=True)
 
-        with st.spinner("🤖 Getting AI recommendation..."):
+        with st.spinner(T["spinner_rec"]):
             try:
-                rec = get_recommendation(api_key, flights, origin, destination, cabin)
+                rec = get_recommendation(api_key, flights, origin, destination, cabin, T["rec_prompt"])
                 if rec:
                     st.markdown(
                         '<div style="background:#1e1b4b;border:1px solid #3730a3;border-radius:12px;padding:1.2rem 1.5rem;margin:1rem 0;">'
-                        '<span class="ai-badge">&#x1F916; Groq AI Recommendation</span><br>'
+                        f'<span class="ai-badge">{T["ai_badge"]}</span><br>'
                         '<span style="color:#c7d2fe;font-size:0.95rem;line-height:1.6;">' + rec + '</span>'
                         '</div>',
                         unsafe_allow_html=True
@@ -256,10 +417,11 @@ if search_clicked:
                 pass
 
         st.markdown("<br>", unsafe_allow_html=True)
-        sort_by = st.selectbox("Sort by", ["💰 Price (low → high)", "⏱ Duration (shortest first)", "🛫 Departure time"])
-        if "Price" in sort_by:
+        sort_opts = [T["sort_price"], T["sort_duration"], T["sort_depart"]]
+        sort_by = st.selectbox(T["sort_label"], sort_opts)
+        if sort_by == T["sort_price"]:
             flights.sort(key=lambda x: x.get("price", 9999))
-        elif "Duration" in sort_by:
+        elif sort_by == T["sort_duration"]:
             def dur_mins(d):
                 h = int(re.search(r"(\d+)h", d).group(1)) if re.search(r"(\d+)h", d) else 0
                 m = int(re.search(r"(\d+)m", d).group(1)) if re.search(r"(\d+)m", d) else 0
@@ -268,28 +430,29 @@ if search_clicked:
         else:
             flights.sort(key=lambda x: x.get("departure_time", "00:00"))
 
-        st.markdown(f"### Flights &middot; {origin} &#x2192; {destination} &middot; {depart_date.strftime('%d %b %Y')}")
+        st.markdown(f"### {T['flights_heading']} &middot; {origin} &#x2192; {destination} &middot; {depart_date.strftime('%d %b %Y')}")
 
         for f in flights:
-            stops      = int(f.get("stops", 0))
-            stops_txt  = "Nonstop" if stops == 0 else (str(stops) + (" stop" if stops == 1 else " stops"))
-            stops_cls  = "nonstop" if stops == 0 else "oneplus"
-            via        = f.get("via", "")
-            via_part   = (' <span class="info-tag">via ' + via + '</span>') if via else ""
-            offset     = int(f.get("arrival_date_offset", 0))
-            next_day   = ' <span style="color:#f87171;font-size:0.7rem;">+1 day</span>' if offset else ""
+            stops     = int(f.get("stops", 0))
+            if stops == 0:
+                stops_txt = T["nonstop"]
+            else:
+                stops_txt = str(stops) + " " + (T["stop"] if stops == 1 else T["stops"])
+            stops_cls = "nonstop" if stops == 0 else "oneplus"
+            via       = f.get("via", "")
+            via_part  = (f' <span class="info-tag">{T["via_label"]} {via}</span>') if via else ""
+            offset    = int(f.get("arrival_date_offset", 0))
+            next_day  = f' <span style="color:#f87171;font-size:0.7rem;">{T["next_day"]}</span>' if offset else ""
             refundable = f.get("refundable", False)
             ref_color  = "#4ade80" if refundable else "#f87171"
-            ref_label  = "Refundable" if refundable else "Non-refundable"
-            route_mid  = "Nonstop" if stops == 0 else ("1 stop via " + via if via else "1 stop")
-            cabin_disp = cabin.replace("_", " ").title()
+            ref_label  = T["refundable"] if refundable else T["non_refundable"]
+            route_mid  = T["nonstop"] if stops == 0 else (f'1 {T["stop"]} {T["via_label"]} {via}' if via else f'1 {T["stop"]}')
+            cabin_disp = cabin_display
             price      = int(f.get("price", 0))
             total      = price * int(adults)
 
             html = (
                 '<div class="flight-card">'
-
-                # Top row: airline + price
                 '<div style="display:flex;justify-content:space-between;align-items:flex-start;">'
                 '<div>'
                 '<div class="airline-name">&#x2708; ' + str(f.get("airline","")) + '&nbsp;&nbsp;'
@@ -304,11 +467,9 @@ if search_clicked:
                 '</div>'
                 '<div style="text-align:right;">'
                 '<div class="price-main">' + currency + ' ' + f'{price:,}' + '</div>'
-                '<div class="price-label">per person &middot; ' + str(adults) + ' pax = ' + currency + ' ' + f'{total:,}' + '</div>'
+                '<div class="price-label">' + T["per_person"] + ' &middot; ' + str(adults) + ' ' + T["pax"] + ' = ' + currency + ' ' + f'{total:,}' + '</div>'
                 '</div>'
                 '</div>'
-
-                # Time row
                 '<div style="display:flex;align-items:center;gap:1.5rem;margin-top:1rem;">'
                 '<div>'
                 '<div class="time-big">' + str(f.get("departure_time","--:--")) + '</div>'
@@ -325,8 +486,6 @@ if search_clicked:
                 '<div class="city-code">' + destination + '</div>'
                 '</div>'
                 '</div>'
-
-                # Footer row
                 '<hr style="border:none;border-top:1px solid #1f2d45;margin:0.8rem 0;">'
                 '<div style="display:flex;gap:1.5rem;font-size:0.78rem;color:#64748b;">'
                 '<span>&#x2708; ' + str(f.get("aircraft","")) + '</span>'
@@ -337,7 +496,7 @@ if search_clicked:
             )
             st.markdown(html, unsafe_allow_html=True)
 
-        st.caption("⚡ Powered by Groq (Llama 3.3 70B) · Results are AI-generated for informational purposes")
+        st.caption(T["powered"])
 
 st.markdown("---")
-st.markdown('<div style="text-align:center;color:#334155;font-size:0.8rem;padding:1rem 0;">SkySearch &middot; Built with Streamlit + Groq AI &middot; Hackathon 2026</div>', unsafe_allow_html=True)
+st.markdown(f'<div style="text-align:center;color:#334155;font-size:0.8rem;padding:1rem 0;">{T["footer"]}</div>', unsafe_allow_html=True)
