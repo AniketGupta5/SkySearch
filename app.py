@@ -288,7 +288,45 @@ GROQ_MODELS = [
     "gemma2-9b-it",
 ]
 
-# ── AI Backend calls ───────────────────────────────────────────────────────────
+# ── Booking URL builder ────────────────────────────────────────────────────────
+def booking_urls(origin, destination, depart_date, adults, cabin, airline=""):
+    d = depart_date  # "YYYY-MM-DD"
+    dd = d.replace("-", "")          # 20260619
+    dd_slash = d[8:10] + "/" + d[5:7] + "/" + d[0:4]  # 19/06/2026
+    cabin_lower = cabin.lower().replace("_", " ")
+    cabin_mmt = "E" if "economy" in cabin_lower else "B" if "business" in cabin_lower else "F"
+
+    # Airline → direct website mapping
+    airline_direct = {
+        "indigo": f"https://www.goindigo.in/flight-booking.html#{origin}-{destination}-{d}-{adults}-0-0-{cabin_mmt}",
+        "air india": f"https://www.airindia.com/book-flights.htm",
+        "spicejet": f"https://www.spicejet.com/",
+        "vistara": f"https://www.airvistara.com/in/en",
+        "akasa": f"https://www.akasaair.com/",
+        "emirates": f"https://www.emirates.com/in/english/booking/",
+        "air arabia": f"https://www.airarabia.com/en",
+        "flydubai": f"https://www.flydubai.com/en/",
+        "qatar airways": f"https://www.qatarairways.com/en-in/",
+        "etihad": f"https://www.etihad.com/en-in/",
+        "singapore airlines": f"https://www.singaporeair.com/en_UK/in/",
+        "lufthansa": f"https://www.lufthansa.com/in/en/",
+        "british airways": f"https://www.britishairways.com/en-gb/",
+    }
+    airline_url = None
+    for key, url in airline_direct.items():
+        if key in airline.lower():
+            airline_url = url
+            break
+
+    return {
+        "MakeMyTrip": f"https://www.makemytrip.com/flights/international/search?itinerary={origin}-{destination}-{d}&tripType=O&paxType=A-{adults}_C-0_I-0&cabinClass={cabin_mmt}&ccde=IN&lang=eng",
+        "Cleartrip":  f"https://www.cleartrip.com/flights/results?adults={adults}&childs=0&infants=0&class={cabin_lower}&depart_date={dd_slash}&from={origin}&to={destination}&intl=y&carrier=&sd=",
+        "EaseMyTrip": f"https://flight.easemytrip.com/FlightList/Index?seg1={origin}|{destination}|{d}&ttype=1&ad={adults}&ch=0&inf=0&cbn={cabin_mmt}&nonstop=false&isNearBy=false&lng=1",
+        "Skyscanner":  f"https://www.skyscanner.co.in/transport/flights/{origin.lower()}/{destination.lower()}/{dd}/",
+        "Google Flights": f"https://www.google.com/travel/flights?q=flights+from+{origin}+to+{destination}+on+{d}",
+        **({"✈ Airline Site": airline_url} if airline_url else {}),
+    }
+
 def call_groq(api_key, prompt, system_prompt, model, max_tokens=3000):
     headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
     body = {
@@ -493,12 +531,20 @@ with st.sidebar:
     st.divider()
 
     # ── AI Backend selector ────────────────────────────────────────────────
+    # Detect if running on Streamlit Cloud (no localhost access)
+    is_cloud = os.environ.get("STREAMLIT_SHARING_MODE") or "streamlit.app" in os.environ.get("HOSTNAME", "") or os.path.exists("/mount/src")
+
     st.markdown(T["ai_backend_header"])
-    backend_choice = st.radio(
-        "Backend",
-        options=[T["backend_groq"], T["backend_ollama"]],
-        label_visibility="collapsed",
-    )
+    if is_cloud:
+        # On cloud — Groq only, Ollama not available
+        backend_choice = T["backend_groq"]
+        st.info("☁️ Running on Streamlit Cloud — Groq is used automatically. To use Ollama, run the app locally.")
+    else:
+        backend_choice = st.radio(
+            "Backend",
+            options=[T["backend_groq"], T["backend_ollama"]],
+            label_visibility="collapsed",
+        )
     is_groq = backend_choice == T["backend_groq"]
 
     st.divider()
@@ -709,6 +755,14 @@ with tab_search:
                 '<span>&#x2708; ' + str(f.get("aircraft","")) + '</span>'
                 '<span>&#x1F9F3; ' + str(f.get("baggage","")) + '</span>'
                 '<span>&#x1F37D; ' + str(f.get("meal","")) + '</span>'
+                '</div>'
+                '<hr style="border:none;border-top:1px solid #1f2d45;margin:0.8rem 0;">'
+                '<div style="font-size:0.75rem;color:#64748b;margin-bottom:6px;">🎟️ Book this route on:</div>'
+                '<div style="display:flex;gap:8px;flex-wrap:wrap;">'
+                + "".join([
+                    f'<a href="{url}" target="_blank" style="background:#1e3a6e;color:#93c5fd;border:1px solid #2563eb;border-radius:8px;padding:5px 14px;font-size:0.78rem;font-weight:500;text-decoration:none;white-space:nowrap;">{name}</a>'
+                    for name, url in booking_urls(origin, destination, depart_date.strftime("%Y-%m-%d"), adults, cabin, f.get("airline","")).items()
+                ]) +
                 '</div>'
                 '</div>'
             )
