@@ -504,15 +504,11 @@ with st.sidebar:
     st.divider()
 
     if is_groq:
-        # BYOK — Groq
-        st.markdown(T["groq_key_header"])
-        st.caption(T["groq_key_caption"])
-        groq_key = st.text_input(
-            "Groq Key", type="password",
-            placeholder=T["groq_key_placeholder"],
-            label_visibility="collapsed",
-        )
+        # Key loaded from Streamlit secrets or environment variable
+        groq_key = st.secrets.get("GROQ_API_KEY", "") or os.environ.get("GROQ_API_KEY", "")
         groq_model = st.selectbox(T["groq_model_label"], GROQ_MODELS)
+        if not groq_key:
+            st.warning("⚠️ No Groq API key configured. Add it to Streamlit secrets.")
         backend_cfg = {
             "backend": "groq",
             "groq_key": groq_key,
@@ -592,7 +588,7 @@ with tab_search:
 
     if search_clicked:
         if is_groq and not groq_key:
-            st.error(T["err_no_key"]); st.stop()
+            st.error("⚠️ Groq API key not configured on the server. Please contact the app owner."); st.stop()
         if not is_groq and not ollama_model.strip():
             st.error(T["err_no_model"]); st.stop()
         if not origin or not destination:
