@@ -2,7 +2,27 @@ import streamlit as st
 import requests
 import json
 import re
-from datetime import date, timedelta
+import os
+import uuid
+from datetime import date, timedelta, datetime
+
+# ── Reviews storage (JSON file — works locally and on Streamlit Cloud) ─────────
+REVIEWS_FILE = "reviews.json"
+
+def load_reviews():
+    if os.path.exists(REVIEWS_FILE):
+        try:
+            with open(REVIEWS_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            return []
+    return []
+
+def save_review(review: dict):
+    reviews = load_reviews()
+    reviews.insert(0, review)  # newest first
+    with open(REVIEWS_FILE, "w", encoding="utf-8") as f:
+        json.dump(reviews, f, ensure_ascii=False, indent=2)
 
 # ── Page config ────────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -70,6 +90,30 @@ TRANSLATIONS = {
         "language_label": "🌐 Language / भाषा / భాష",
         "cabin_options": ["ECONOMY", "PREMIUM_ECONOMY", "BUSINESS", "FIRST"],
         "rec_prompt": "Which is best value and which is best for comfort? Be brief. Reply in English.",
+        "tab_search": "✈️ Search Flights",
+        "tab_reviews": "⭐ Reviews",
+        "review_heading": "User Reviews",
+        "review_subhead": "Real feedback from real users",
+        "review_form_heading": "### 📝 Leave a Review",
+        "review_name": "Your Name",
+        "review_name_placeholder": "e.g. Priya Sharma",
+        "review_city": "Your City",
+        "review_city_placeholder": "e.g. Hyderabad",
+        "review_rating": "Rating",
+        "review_liked": "What did you like?",
+        "review_liked_placeholder": "The UI is clean, flight results are realistic...",
+        "review_improve": "What would you improve?",
+        "review_improve_placeholder": "Would love real booking links...",
+        "review_would_use": "Would you use this for real flight research?",
+        "review_submit": "Submit Review",
+        "review_success": "✅ Thanks for your review!",
+        "review_err_name": "⚠️ Please enter your name.",
+        "review_err_liked": "⚠️ Please share what you liked.",
+        "review_no_reviews": "No reviews yet. Be the first!",
+        "review_yes": "Yes", "review_no": "No",
+        "review_count": "reviews so far",
+        "review_avg": "average rating",
+        "review_share": "Share the app to get more reviews →",
     },
     "हिंदी": {
         "hero_title": "✈ स्काईसर्च",
@@ -128,6 +172,30 @@ TRANSLATIONS = {
         "cabin_options": ["इकोनॉमी", "प्रीमियम इकोनॉमी", "बिज़नेस", "फर्स्ट"],
         "cabin_api_map": {"इकोनॉमी": "ECONOMY", "प्रीमियम इकोनॉमी": "PREMIUM_ECONOMY", "बिज़नेस": "BUSINESS", "फर्स्ट": "FIRST"},
         "rec_prompt": "Which is best value and which is best for comfort? Be brief. Reply in Hindi (Devanagari script).",
+        "tab_search": "✈️ फ्लाइट खोजें",
+        "tab_reviews": "⭐ समीक्षाएं",
+        "review_heading": "उपयोगकर्ता समीक्षाएं",
+        "review_subhead": "वास्तविक उपयोगकर्ताओं की वास्तविक प्रतिक्रिया",
+        "review_form_heading": "### 📝 समीक्षा दें",
+        "review_name": "आपका नाम",
+        "review_name_placeholder": "जैसे प्रिया शर्मा",
+        "review_city": "आपका शहर",
+        "review_city_placeholder": "जैसे हैदराबाद",
+        "review_rating": "रेटिंग",
+        "review_liked": "आपको क्या पसंद आया?",
+        "review_liked_placeholder": "UI अच्छी है, फ्लाइट परिणाम सटीक हैं...",
+        "review_improve": "क्या सुधार होना चाहिए?",
+        "review_improve_placeholder": "असली बुकिंग लिंक होते तो और अच्छा होता...",
+        "review_would_use": "क्या आप इसे वास्तविक फ्लाइट रिसर्च के लिए उपयोग करेंगे?",
+        "review_submit": "समीक्षा सबमिट करें",
+        "review_success": "✅ आपकी समीक्षा के लिए धन्यवाद!",
+        "review_err_name": "⚠️ कृपया अपना नाम दर्ज करें।",
+        "review_err_liked": "⚠️ कृपया बताएं आपको क्या पसंद आया।",
+        "review_no_reviews": "अभी कोई समीक्षा नहीं। पहले आप करें!",
+        "review_yes": "हाँ", "review_no": "नहीं",
+        "review_count": "समीक्षाएं अब तक",
+        "review_avg": "औसत रेटिंग",
+        "review_share": "अधिक समीक्षाओं के लिए ऐप शेयर करें →",
     },
     "తెలుగు": {
         "hero_title": "✈ స్కైసెర్చ్",
@@ -186,6 +254,30 @@ TRANSLATIONS = {
         "cabin_options": ["ఎకానమీ", "ప్రీమియం ఎకానమీ", "బిజినెస్", "ఫస్ట్"],
         "cabin_api_map": {"ఎకానమీ": "ECONOMY", "ప్రీమియం ఎకానమీ": "PREMIUM_ECONOMY", "బిజినెస్": "BUSINESS", "ఫస్ట్": "FIRST"},
         "rec_prompt": "Which is best value and which is best for comfort? Be brief. Reply in Telugu script.",
+        "tab_search": "✈️ విమానాలు వెతకండి",
+        "tab_reviews": "⭐ సమీక్షలు",
+        "review_heading": "వినియోగదారు సమీక్షలు",
+        "review_subhead": "నిజమైన వినియోగదారుల నిజమైన అభిప్రాయాలు",
+        "review_form_heading": "### 📝 సమీక్ష ఇవ్వండి",
+        "review_name": "మీ పేరు",
+        "review_name_placeholder": "ఉదా: ప్రియా శర్మ",
+        "review_city": "మీ నగరం",
+        "review_city_placeholder": "ఉదా: హైదరాబాద్",
+        "review_rating": "రేటింగ్",
+        "review_liked": "మీకు ఏమి నచ్చింది?",
+        "review_liked_placeholder": "UI చాలా బాగుంది, విమాన ఫలితాలు వాస్తవికంగా ఉన్నాయి...",
+        "review_improve": "ఏమి మెరుగుపరచాలి?",
+        "review_improve_placeholder": "నిజమైన బుకింగ్ లింక్‌లు ఉంటే మరింత బాగుంటుంది...",
+        "review_would_use": "నిజమైన విమాన పరిశోధన కోసం దీన్ని ఉపయోగిస్తారా?",
+        "review_submit": "సమీక్ష సమర్పించండి",
+        "review_success": "✅ మీ సమీక్షకు ధన్యవాదాలు!",
+        "review_err_name": "⚠️ దయచేసి మీ పేరు నమోదు చేయండి.",
+        "review_err_liked": "⚠️ దయచేసి మీకు ఏమి నచ్చిందో చెప్పండి.",
+        "review_no_reviews": "ఇంకా సమీక్షలు లేవు. మీరే మొదటిగా చేయండి!",
+        "review_yes": "అవును", "review_no": "కాదు",
+        "review_count": "సమీక్షలు ఇప్పటివరకు",
+        "review_avg": "సగటు రేటింగ్",
+        "review_share": "మరిన్ని సమీక్షల కోసం యాప్ షేర్ చేయండి →",
     },
 }
 
@@ -460,176 +552,269 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # ══════════════════════════════════════════════════════════════════════════════
-# SEARCH FORM
+# TABS
 # ══════════════════════════════════════════════════════════════════════════════
-st.markdown('<div class="search-card">', unsafe_allow_html=True)
-r1c1, r1c2, r1c3 = st.columns([2, 1, 1])
-with r1c1:
-    quick = st.selectbox(T["quick_route"], list(POPULAR.keys()))
-with r1c2:
-    currency_label = st.selectbox(T["currency_label"], list(CURRENCY_MAP.keys()))
-    currency = CURRENCY_MAP[currency_label]
-with r1c3:
-    cabin_display = st.selectbox(T["cabin_label"], T["cabin_options"])
-    cabin = T.get("cabin_api_map", {}).get(cabin_display, cabin_display)
-
-default_o, default_d = POPULAR[quick]
-c1, c2, c3, c4 = st.columns([1.2, 1.2, 1.1, 0.7])
-with c1:
-    origin = st.text_input(T["from_label"], value=default_o, placeholder=T["from_placeholder"]).strip().upper()
-with c2:
-    destination = st.text_input(T["to_label"], value=default_d, placeholder=T["to_placeholder"]).strip().upper()
-with c3:
-    depart_date = st.date_input(T["date_label"], value=date.today() + timedelta(days=7), min_value=date.today())
-with c4:
-    adults = st.number_input(T["passengers_label"], min_value=1, max_value=9, value=1)
-
-if origin and destination:
-    ho = IATA_HINT.get(origin, "?")
-    hd = IATA_HINT.get(destination, "?")
-    st.caption(f"📍 {origin} = {ho}   →   {destination} = {hd}")
-
-search_clicked = st.button(T["search_btn"])
-st.markdown('</div>', unsafe_allow_html=True)
+tab_search, tab_reviews = st.tabs([T["tab_search"], T["tab_reviews"]])
 
 # ══════════════════════════════════════════════════════════════════════════════
-# VALIDATION
+# TAB 1 — SEARCH
 # ══════════════════════════════════════════════════════════════════════════════
-if search_clicked:
-    if is_groq and not groq_key:
-        st.error(T["err_no_key"]); st.stop()
-    if not is_groq and not ollama_model.strip():
-        st.error(T["err_no_model"]); st.stop()
-    if not origin or not destination:
-        st.error(T["err_no_iata"]); st.stop()
-    if len(origin) != 3 or len(destination) != 3:
-        st.error(T["err_iata_len"]); st.stop()
-    if origin == destination:
-        st.error(T["err_same"]); st.stop()
+with tab_search:
+    st.markdown('<div class="search-card">', unsafe_allow_html=True)
+    r1c1, r1c2, r1c3 = st.columns([2, 1, 1])
+    with r1c1:
+        quick = st.selectbox(T["quick_route"], list(POPULAR.keys()))
+    with r1c2:
+        currency_label = st.selectbox(T["currency_label"], list(CURRENCY_MAP.keys()))
+        currency = CURRENCY_MAP[currency_label]
+    with r1c3:
+        cabin_display = st.selectbox(T["cabin_label"], T["cabin_options"])
+        cabin = T.get("cabin_api_map", {}).get(cabin_display, cabin_display)
 
-    # ── Fetch flights ──────────────────────────────────────────────────────
-    with st.spinner(T["spinner_flights"]):
-        try:
-            flights = generate_flights(
-                backend_cfg, origin, destination,
-                depart_date.strftime("%Y-%m-%d"), adults, cabin, currency
-            )
-        except Exception as e:
-            if "ollama_unreachable" in str(e):
-                st.error(T["err_ollama"])
-            else:
-                st.error(f"❌ {e}")
-            st.stop()
+    default_o, default_d = POPULAR[quick]
+    c1, c2, c3, c4 = st.columns([1.2, 1.2, 1.1, 0.7])
+    with c1:
+        origin = st.text_input(T["from_label"], value=default_o, placeholder=T["from_placeholder"]).strip().upper()
+    with c2:
+        destination = st.text_input(T["to_label"], value=default_d, placeholder=T["to_placeholder"]).strip().upper()
+    with c3:
+        depart_date = st.date_input(T["date_label"], value=date.today() + timedelta(days=7), min_value=date.today())
+    with c4:
+        adults = st.number_input(T["passengers_label"], min_value=1, max_value=9, value=1)
 
-    # ── Stats bar ──────────────────────────────────────────────────────────
-    prices = [f["price"] for f in flights if isinstance(f.get("price"), (int, float))]
-    st.markdown("---")
-    s1, s2, s3, s4 = st.columns(4)
-    with s1:
-        st.markdown(f'<div class="stat-pill"><div class="stat-value">{len(flights)}</div><div class="stat-desc">{T["stat_found"]}</div></div>', unsafe_allow_html=True)
-    with s2:
-        st.markdown(f'<div class="stat-pill"><div class="stat-value">{currency} {min(prices):,}</div><div class="stat-desc">{T["stat_cheapest"]}</div></div>', unsafe_allow_html=True)
-    with s3:
-        st.markdown(f'<div class="stat-pill"><div class="stat-value">{currency} {max(prices):,}</div><div class="stat-desc">{T["stat_expensive"]}</div></div>', unsafe_allow_html=True)
-    with s4:
-        avg = int(sum(prices) / len(prices))
-        st.markdown(f'<div class="stat-pill"><div class="stat-value">{currency} {avg:,}</div><div class="stat-desc">{T["stat_avg"]}</div></div>', unsafe_allow_html=True)
+    if origin and destination:
+        ho = IATA_HINT.get(origin, "?")
+        hd = IATA_HINT.get(destination, "?")
+        st.caption(f"📍 {origin} = {ho}   →   {destination} = {hd}")
 
-    # ── AI Recommendation ──────────────────────────────────────────────────
-    with st.spinner(T["spinner_rec"]):
-        try:
-            rec = get_recommendation(backend_cfg, flights, origin, destination, cabin, T["rec_prompt"])
-            if rec:
-                st.markdown(
-                    '<div style="background:#1e1b4b;border:1px solid #3730a3;border-radius:12px;padding:1.2rem 1.5rem;margin:1rem 0;">'
-                    f'<span class="ai-badge">{T["ai_badge"]}</span><br>'
-                    '<span style="color:#c7d2fe;font-size:0.95rem;line-height:1.6;">' + rec + '</span>'
-                    '</div>',
-                    unsafe_allow_html=True
+    search_clicked = st.button(T["search_btn"])
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    if search_clicked:
+        if is_groq and not groq_key:
+            st.error(T["err_no_key"]); st.stop()
+        if not is_groq and not ollama_model.strip():
+            st.error(T["err_no_model"]); st.stop()
+        if not origin or not destination:
+            st.error(T["err_no_iata"]); st.stop()
+        if len(origin) != 3 or len(destination) != 3:
+            st.error(T["err_iata_len"]); st.stop()
+        if origin == destination:
+            st.error(T["err_same"]); st.stop()
+
+        with st.spinner(T["spinner_flights"]):
+            try:
+                flights = generate_flights(
+                    backend_cfg, origin, destination,
+                    depart_date.strftime("%Y-%m-%d"), adults, cabin, currency
                 )
-        except Exception:
-            pass
+            except Exception as e:
+                if "ollama_unreachable" in str(e):
+                    st.error(T["err_ollama"])
+                else:
+                    st.error(f"❌ {e}")
+                st.stop()
 
-    # ── Sort ───────────────────────────────────────────────────────────────
-    st.markdown("<br>", unsafe_allow_html=True)
-    sort_opts = [T["sort_price"], T["sort_duration"], T["sort_depart"]]
-    sort_by = st.selectbox(T["sort_label"], sort_opts)
-    if sort_by == T["sort_price"]:
-        flights.sort(key=lambda x: x.get("price", 9999))
-    elif sort_by == T["sort_duration"]:
-        def dur_mins(d):
-            h = int(re.search(r"(\d+)h", d).group(1)) if re.search(r"(\d+)h", d) else 0
-            m = int(re.search(r"(\d+)m", d).group(1)) if re.search(r"(\d+)m", d) else 0
-            return h * 60 + m
-        flights.sort(key=lambda x: dur_mins(x.get("duration", "99h 99m")))
-    else:
-        flights.sort(key=lambda x: x.get("departure_time", "00:00"))
+        prices = [f["price"] for f in flights if isinstance(f.get("price"), (int, float))]
+        st.markdown("---")
+        s1, s2, s3, s4 = st.columns(4)
+        with s1:
+            st.markdown(f'<div class="stat-pill"><div class="stat-value">{len(flights)}</div><div class="stat-desc">{T["stat_found"]}</div></div>', unsafe_allow_html=True)
+        with s2:
+            st.markdown(f'<div class="stat-pill"><div class="stat-value">{currency} {min(prices):,}</div><div class="stat-desc">{T["stat_cheapest"]}</div></div>', unsafe_allow_html=True)
+        with s3:
+            st.markdown(f'<div class="stat-pill"><div class="stat-value">{currency} {max(prices):,}</div><div class="stat-desc">{T["stat_expensive"]}</div></div>', unsafe_allow_html=True)
+        with s4:
+            avg = int(sum(prices) / len(prices))
+            st.markdown(f'<div class="stat-pill"><div class="stat-value">{currency} {avg:,}</div><div class="stat-desc">{T["stat_avg"]}</div></div>', unsafe_allow_html=True)
 
-    st.markdown(f"### {T['flights_heading']} &middot; {origin} &#x2192; {destination} &middot; {depart_date.strftime('%d %b %Y')}")
+        with st.spinner(T["spinner_rec"]):
+            try:
+                rec = get_recommendation(backend_cfg, flights, origin, destination, cabin, T["rec_prompt"])
+                if rec:
+                    st.markdown(
+                        '<div style="background:#1e1b4b;border:1px solid #3730a3;border-radius:12px;padding:1.2rem 1.5rem;margin:1rem 0;">'
+                        f'<span class="ai-badge">{T["ai_badge"]}</span><br>'
+                        '<span style="color:#c7d2fe;font-size:0.95rem;line-height:1.6;">' + rec + '</span>'
+                        '</div>',
+                        unsafe_allow_html=True
+                    )
+            except Exception:
+                pass
 
-    # ── Flight cards ───────────────────────────────────────────────────────
-    for f in flights:
-        stops     = int(f.get("stops", 0))
-        stops_txt = T["nonstop"] if stops == 0 else f"{stops} {T['stop'] if stops==1 else T['stops']}"
-        stops_cls = "nonstop" if stops == 0 else "oneplus"
-        via       = f.get("via", "")
-        via_part  = f' <span class="info-tag">{T["via_label"]} {via}</span>' if via else ""
-        offset    = int(f.get("arrival_date_offset", 0))
-        next_day  = f' <span style="color:#f87171;font-size:0.7rem;">{T["next_day"]}</span>' if offset else ""
-        refundable = f.get("refundable", False)
-        ref_color  = "#4ade80" if refundable else "#f87171"
-        ref_label  = T["refundable"] if refundable else T["non_refundable"]
-        route_mid  = T["nonstop"] if stops == 0 else (f'1 {T["stop"]} {T["via_label"]} {via}' if via else f'1 {T["stop"]}')
-        price      = int(f.get("price", 0))
-        total      = price * int(adults)
+        st.markdown("<br>", unsafe_allow_html=True)
+        sort_opts = [T["sort_price"], T["sort_duration"], T["sort_depart"]]
+        sort_by = st.selectbox(T["sort_label"], sort_opts)
+        if sort_by == T["sort_price"]:
+            flights.sort(key=lambda x: x.get("price", 9999))
+        elif sort_by == T["sort_duration"]:
+            def dur_mins(d):
+                h = int(re.search(r"(\d+)h", d).group(1)) if re.search(r"(\d+)h", d) else 0
+                m = int(re.search(r"(\d+)m", d).group(1)) if re.search(r"(\d+)m", d) else 0
+                return h * 60 + m
+            flights.sort(key=lambda x: dur_mins(x.get("duration", "99h 99m")))
+        else:
+            flights.sort(key=lambda x: x.get("departure_time", "00:00"))
 
-        html = (
-            '<div class="flight-card">'
-            '<div style="display:flex;justify-content:space-between;align-items:flex-start;">'
-            '<div>'
-            '<div class="airline-name">&#x2708; ' + str(f.get("airline","")) + '&nbsp;&nbsp;'
-            '<span style="font-weight:400;color:#475569;font-size:0.82rem;">' + str(f.get("flight_number","")) + '</span>'
-            '</div>'
-            '<div class="tag-row">'
-            '<span class="stops-badge ' + stops_cls + '">' + stops_txt + '</span>'
-            '<span class="cabin-tag">' + cabin_display + '</span>'
-            + via_part +
-            '<span class="info-tag" style="color:' + ref_color + ';">' + ref_label + '</span>'
-            '</div>'
-            '</div>'
-            '<div style="text-align:right;">'
-            '<div class="price-main">' + currency + ' ' + f'{price:,}' + '</div>'
-            '<div class="price-label">' + T["per_person"] + ' &middot; ' + str(adults) + ' ' + T["pax"] + ' = ' + currency + ' ' + f'{total:,}' + '</div>'
-            '</div>'
-            '</div>'
-            '<div style="display:flex;align-items:center;gap:1.5rem;margin-top:1rem;">'
-            '<div>'
-            '<div class="time-big">' + str(f.get("departure_time","--:--")) + '</div>'
-            '<div class="city-code">' + origin + '</div>'
-            '</div>'
-            '<div style="flex:1;text-align:center;">'
-            '<div class="duration-pill">&#x23F1; ' + str(f.get("duration","")) + '</div>'
-            '<div style="display:flex;align-items:center;gap:6px;color:#475569;font-size:0.78rem;margin-top:6px;">'
-            '<div class="dot-line"></div><span>' + route_mid + '</span><div class="dot-line"></div>'
-            '</div>'
-            '</div>'
-            '<div style="text-align:right;">'
-            '<div class="time-big">' + str(f.get("arrival_time","--:--")) + next_day + '</div>'
-            '<div class="city-code">' + destination + '</div>'
-            '</div>'
-            '</div>'
-            '<hr style="border:none;border-top:1px solid #1f2d45;margin:0.8rem 0;">'
-            '<div style="display:flex;gap:1.5rem;font-size:0.78rem;color:#64748b;">'
-            '<span>&#x2708; ' + str(f.get("aircraft","")) + '</span>'
-            '<span>&#x1F9F3; ' + str(f.get("baggage","")) + '</span>'
-            '<span>&#x1F37D; ' + str(f.get("meal","")) + '</span>'
-            '</div>'
-            '</div>'
+        st.markdown(f"### {T['flights_heading']} &middot; {origin} &#x2192; {destination} &middot; {depart_date.strftime('%d %b %Y')}")
+
+        for f in flights:
+            stops     = int(f.get("stops", 0))
+            stops_txt = T["nonstop"] if stops == 0 else f"{stops} {T['stop'] if stops==1 else T['stops']}"
+            stops_cls = "nonstop" if stops == 0 else "oneplus"
+            via       = f.get("via", "")
+            via_part  = f' <span class="info-tag">{T["via_label"]} {via}</span>' if via else ""
+            offset    = int(f.get("arrival_date_offset", 0))
+            next_day  = f' <span style="color:#f87171;font-size:0.7rem;">{T["next_day"]}</span>' if offset else ""
+            refundable = f.get("refundable", False)
+            ref_color  = "#4ade80" if refundable else "#f87171"
+            ref_label  = T["refundable"] if refundable else T["non_refundable"]
+            route_mid  = T["nonstop"] if stops == 0 else (f'1 {T["stop"]} {T["via_label"]} {via}' if via else f'1 {T["stop"]}')
+            price      = int(f.get("price", 0))
+            total      = price * int(adults)
+
+            html = (
+                '<div class="flight-card">'
+                '<div style="display:flex;justify-content:space-between;align-items:flex-start;">'
+                '<div>'
+                '<div class="airline-name">&#x2708; ' + str(f.get("airline","")) + '&nbsp;&nbsp;'
+                '<span style="font-weight:400;color:#475569;font-size:0.82rem;">' + str(f.get("flight_number","")) + '</span>'
+                '</div>'
+                '<div class="tag-row">'
+                '<span class="stops-badge ' + stops_cls + '">' + stops_txt + '</span>'
+                '<span class="cabin-tag">' + cabin_display + '</span>'
+                + via_part +
+                '<span class="info-tag" style="color:' + ref_color + ';">' + ref_label + '</span>'
+                '</div>'
+                '</div>'
+                '<div style="text-align:right;">'
+                '<div class="price-main">' + currency + ' ' + f'{price:,}' + '</div>'
+                '<div class="price-label">' + T["per_person"] + ' &middot; ' + str(adults) + ' ' + T["pax"] + ' = ' + currency + ' ' + f'{total:,}' + '</div>'
+                '</div>'
+                '</div>'
+                '<div style="display:flex;align-items:center;gap:1.5rem;margin-top:1rem;">'
+                '<div>'
+                '<div class="time-big">' + str(f.get("departure_time","--:--")) + '</div>'
+                '<div class="city-code">' + origin + '</div>'
+                '</div>'
+                '<div style="flex:1;text-align:center;">'
+                '<div class="duration-pill">&#x23F1; ' + str(f.get("duration","")) + '</div>'
+                '<div style="display:flex;align-items:center;gap:6px;color:#475569;font-size:0.78rem;margin-top:6px;">'
+                '<div class="dot-line"></div><span>' + route_mid + '</span><div class="dot-line"></div>'
+                '</div>'
+                '</div>'
+                '<div style="text-align:right;">'
+                '<div class="time-big">' + str(f.get("arrival_time","--:--")) + next_day + '</div>'
+                '<div class="city-code">' + destination + '</div>'
+                '</div>'
+                '</div>'
+                '<hr style="border:none;border-top:1px solid #1f2d45;margin:0.8rem 0;">'
+                '<div style="display:flex;gap:1.5rem;font-size:0.78rem;color:#64748b;">'
+                '<span>&#x2708; ' + str(f.get("aircraft","")) + '</span>'
+                '<span>&#x1F9F3; ' + str(f.get("baggage","")) + '</span>'
+                '<span>&#x1F37D; ' + str(f.get("meal","")) + '</span>'
+                '</div>'
+                '</div>'
+            )
+            st.markdown(html, unsafe_allow_html=True)
+
+        powered_key = "powered_groq" if is_groq else "powered_ollama"
+        st.caption(T[powered_key])
+
+# ══════════════════════════════════════════════════════════════════════════════
+# TAB 2 — REVIEWS
+# ══════════════════════════════════════════════════════════════════════════════
+with tab_reviews:
+    reviews = load_reviews()
+
+    # ── Stats row ──────────────────────────────────────────────────────────
+    st.markdown(f"## {T['review_heading']}")
+    st.caption(T["review_subhead"])
+
+    if reviews:
+        avg_rating = sum(r.get("rating", 5) for r in reviews) / len(reviews)
+        rc1, rc2, rc3 = st.columns(3)
+        with rc1:
+            st.markdown(f'<div class="stat-pill"><div class="stat-value">{len(reviews)}</div><div class="stat-desc">{T["review_count"]}</div></div>', unsafe_allow_html=True)
+        with rc2:
+            stars = "⭐" * round(avg_rating)
+            st.markdown(f'<div class="stat-pill"><div class="stat-value">{avg_rating:.1f} {stars}</div><div class="stat-desc">{T["review_avg"]}</div></div>', unsafe_allow_html=True)
+        with rc3:
+            yes_count = sum(1 for r in reviews if r.get("would_use"))
+            pct = int(yes_count / len(reviews) * 100)
+            st.markdown(f'<div class="stat-pill"><div class="stat-value">{pct}%</div><div class="stat-desc">Would use again</div></div>', unsafe_allow_html=True)
+        st.markdown("<br>", unsafe_allow_html=True)
+
+    # ── Review submission form ─────────────────────────────────────────────
+    with st.expander(T["review_form_heading"], expanded=len(reviews) < 5):
+        fa, fb = st.columns(2)
+        with fa:
+            r_name = st.text_input(T["review_name"], placeholder=T["review_name_placeholder"], key="r_name")
+        with fb:
+            r_city = st.text_input(T["review_city"], placeholder=T["review_city_placeholder"], key="r_city")
+
+        r_rating = st.select_slider(
+            T["review_rating"],
+            options=[1, 2, 3, 4, 5],
+            value=5,
+            format_func=lambda x: "⭐" * x,
+            key="r_rating",
         )
-        st.markdown(html, unsafe_allow_html=True)
+        r_liked   = st.text_area(T["review_liked"],   placeholder=T["review_liked_placeholder"],   key="r_liked",   height=80)
+        r_improve = st.text_area(T["review_improve"], placeholder=T["review_improve_placeholder"],  key="r_improve", height=80)
+        r_would_use = st.radio(T["review_would_use"], [T["review_yes"], T["review_no"]], horizontal=True, key="r_would_use")
 
-    powered_key = "powered_groq" if is_groq else "powered_ollama"
-    st.caption(T[powered_key])
+        if st.button(T["review_submit"], key="submit_review"):
+            if not r_name.strip():
+                st.error(T["review_err_name"])
+            elif not r_liked.strip():
+                st.error(T["review_err_liked"])
+            else:
+                save_review({
+                    "id":         str(uuid.uuid4())[:8],
+                    "name":       r_name.strip(),
+                    "city":       r_city.strip(),
+                    "rating":     r_rating,
+                    "liked":      r_liked.strip(),
+                    "improve":    r_improve.strip(),
+                    "would_use":  r_would_use == T["review_yes"],
+                    "timestamp":  datetime.now().strftime("%d %b %Y, %H:%M"),
+                    "lang":       lang,
+                })
+                st.success(T["review_success"])
+                st.rerun()
+
+    st.markdown("---")
+
+    # ── Display reviews ────────────────────────────────────────────────────
+    if not reviews:
+        st.info(T["review_no_reviews"])
+    else:
+        for r in reviews:
+            stars     = "⭐" * r.get("rating", 5)
+            would_use = "✅" if r.get("would_use") else "❌"
+            city_part = f' · {r["city"]}' if r.get("city") else ""
+            st.markdown(f"""
+<div class="flight-card">
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+    <div>
+      <div class="airline-name">👤 {r.get("name","Anonymous")}{city_part}</div>
+      <div style="font-size:1.2rem;margin-top:4px;">{stars}</div>
+    </div>
+    <div style="text-align:right;color:#475569;font-size:0.78rem;">{r.get("timestamp","")}</div>
+  </div>
+  <div style="margin-top:0.8rem;color:#cbd5e1;font-size:0.92rem;line-height:1.6;">
+    💬 <b style="color:#94a3b8;">Liked:</b> {r.get("liked","")}
+  </div>
+  {"" if not r.get("improve") else f'<div style="margin-top:0.4rem;color:#94a3b8;font-size:0.88rem;">🔧 <b>Improve:</b> {r["improve"]}</div>'}
+  <div style="margin-top:0.6rem;">
+    <span class="info-tag">{would_use} Would use for research</span>
+    <span class="info-tag" style="margin-left:6px;">🌐 {r.get("lang","English")}</span>
+  </div>
+</div>
+""", unsafe_allow_html=True)
+
+    st.caption(T["review_share"])
 
 # ── Footer ─────────────────────────────────────────────────────────────────────
 st.markdown("---")
