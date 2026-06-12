@@ -291,41 +291,79 @@ GROQ_MODELS = [
 # ── Booking URL builder ────────────────────────────────────────────────────────
 def booking_urls(origin, destination, depart_date, adults, cabin, airline=""):
     d = depart_date  # "YYYY-MM-DD"
-    dd = d.replace("-", "")          # 20260619
-    dd_slash = d[8:10] + "/" + d[5:7] + "/" + d[0:4]  # 19/06/2026
+    yyyy, mm, dd = d.split("-")
     cabin_lower = cabin.lower().replace("_", " ")
-    cabin_mmt = "E" if "economy" in cabin_lower else "B" if "business" in cabin_lower else "F"
+    cabin_mmt = "E" if "economy" in cabin_lower else ("B" if "business" in cabin_lower else "F")
+    cabin_ct  = "Economy" if "economy" in cabin_lower else ("Business" if "business" in cabin_lower else "First")
 
-    # Airline → direct website mapping
-    airline_direct = {
-        "indigo": f"https://www.goindigo.in/flight-booking.html#{origin}-{destination}-{d}-{adults}-0-0-{cabin_mmt}",
-        "air india": f"https://www.airindia.com/book-flights.htm",
-        "spicejet": f"https://www.spicejet.com/",
-        "vistara": f"https://www.airvistara.com/in/en",
-        "akasa": f"https://www.akasaair.com/",
-        "emirates": f"https://www.emirates.com/in/english/booking/",
-        "air arabia": f"https://www.airarabia.com/en",
-        "flydubai": f"https://www.flydubai.com/en/",
-        "qatar airways": f"https://www.qatarairways.com/en-in/",
-        "etihad": f"https://www.etihad.com/en-in/",
-        "singapore airlines": f"https://www.singaporeair.com/en_UK/in/",
-        "lufthansa": f"https://www.lufthansa.com/in/en/",
-        "british airways": f"https://www.britishairways.com/en-gb/",
+    urls = {
+        "MakeMyTrip": (
+            f"https://www.makemytrip.com/flights/international/search?"
+            f"itinerary={origin}-{destination}-{yyyy}{mm}{dd}"
+            f"&tripType=O&paxType=A-{adults}_C-0_I-0"
+            f"&cabinClass={cabin_mmt}&ccde=IN&lang=eng"
+        ),
+        "Cleartrip": (
+            f"https://www.cleartrip.com/flights/results?"
+            f"adults={adults}&childs=0&infants=0"
+            f"&class={cabin_ct}"
+            f"&depart_date={dd}/{mm}/{yyyy}"
+            f"&from={origin}&to={destination}&intl=y"
+        ),
+        "EaseMyTrip": (
+            f"https://flight.easemytrip.com/FlightList/Index?"
+            f"seg1={origin}|{destination}|{yyyy}-{mm}-{dd}"
+            f"&ttype=1&ad={adults}&ch=0&inf=0"
+            f"&cbn={cabin_mmt}&nonstop=false"
+        ),
+        "Skyscanner": (
+            f"https://www.skyscanner.co.in/transport/flights/"
+            f"{origin.lower()}/{destination.lower()}/{yyyy}{mm}{dd}/"
+            f"?adults={adults}&cabinclass={cabin_lower.replace(' ','_')}"
+        ),
+        "Google Flights": (
+            f"https://www.google.com/travel/flights/search?"
+            f"tfs=CBwQAhoeEgoyMDI2LTA2LTE5agcIARIDSFlEcgcIARIDREJY"
+            f"&q=flights+{origin}+to+{destination}+{yyyy}-{mm}-{dd}"
+            f"&hl=en"
+        ),
     }
-    airline_url = None
-    for key, url in airline_direct.items():
-        if key in airline.lower():
-            airline_url = url
-            break
 
-    return {
-        "MakeMyTrip": f"https://www.makemytrip.com/flights/international/search?itinerary={origin}-{destination}-{d}&tripType=O&paxType=A-{adults}_C-0_I-0&cabinClass={cabin_mmt}&ccde=IN&lang=eng",
-        "Cleartrip":  f"https://www.cleartrip.com/flights/results?adults={adults}&childs=0&infants=0&class={cabin_lower}&depart_date={dd_slash}&from={origin}&to={destination}&intl=y&carrier=&sd=",
-        "EaseMyTrip": f"https://flight.easemytrip.com/FlightList/Index?seg1={origin}|{destination}|{d}&ttype=1&ad={adults}&ch=0&inf=0&cbn={cabin_mmt}&nonstop=false&isNearBy=false&lng=1",
-        "Skyscanner":  f"https://www.skyscanner.co.in/transport/flights/{origin.lower()}/{destination.lower()}/{dd}/",
-        "Google Flights": f"https://www.google.com/travel/flights?q=flights+from+{origin}+to+{destination}+on+{d}",
-        **({"✈ Airline Site": airline_url} if airline_url else {}),
-    }
+    # Airline direct website deep-links
+    airline_lower = airline.lower()
+    if "indigo" in airline_lower or "6e" in airline_lower:
+        urls["✈ IndiGo"] = f"https://www.goindigo.in/flight-booking.html"
+    elif "air india" in airline_lower:
+        urls["✈ Air India"] = f"https://www.airindia.com/in/en/book/flights/one-way.html"
+    elif "spicejet" in airline_lower:
+        urls["✈ SpiceJet"] = f"https://www.spicejet.com/"
+    elif "akasa" in airline_lower:
+        urls["✈ Akasa Air"] = f"https://www.akasaair.com/"
+    elif "emirates" in airline_lower:
+        urls["✈ Emirates"] = (
+            f"https://www.emirates.com/in/english/booking/flight-search/?"
+            f"type=O&class={cabin_lower}&origin={origin}&destination={destination}"
+            f"&depDate={yyyy}-{mm}-{dd}&adults={adults}&children=0&infants=0"
+        )
+    elif "qatar" in airline_lower:
+        urls["✈ Qatar Airways"] = f"https://www.qatarairways.com/en-in/offers/booking.html"
+    elif "etihad" in airline_lower:
+        urls["✈ Etihad"] = f"https://www.etihad.com/en-in/"
+    elif "singapore" in airline_lower:
+        urls["✈ Singapore Airlines"] = f"https://www.singaporeair.com/en_UK/in/"
+    elif "lufthansa" in airline_lower:
+        urls["✈ Lufthansa"] = f"https://www.lufthansa.com/in/en/"
+    elif "british" in airline_lower:
+        urls["✈ British Airways"] = f"https://www.britishairways.com/en-gb/"
+    elif "air arabia" in airline_lower:
+        urls["✈ Air Arabia"] = f"https://www.airarabia.com/en"
+    elif "flydubai" in airline_lower:
+        urls["✈ flydubai"] = f"https://www.flydubai.com/en/"
+    elif "vistara" in airline_lower:
+        urls["✈ Vistara"] = f"https://www.airvistara.com/in/en"
+
+    return urls
+
 
 def call_groq(api_key, prompt, system_prompt, model, max_tokens=3000):
     headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
@@ -449,14 +487,147 @@ CURRENCY_MAP = {
     "USD 🇺🇸": "USD", "INR 🇮🇳": "INR", "EUR 🇪🇺": "EUR",
     "GBP 🇬🇧": "GBP", "AED 🇦🇪": "AED", "SGD 🇸🇬": "SGD",
 }
-IATA_HINT = {
-    "HYD":"Hyderabad","DEL":"Delhi","BOM":"Mumbai","BLR":"Bangalore",
-    "MAA":"Chennai","CCU":"Kolkata","GOI":"Goa","AMD":"Ahmedabad",
-    "DXB":"Dubai","LHR":"London","JFK":"New York","SIN":"Singapore",
-    "NRT":"Tokyo","CDG":"Paris","FRA":"Frankfurt","AMS":"Amsterdam",
-    "DFW":"Dallas","LAX":"Los Angeles","KUL":"Kuala Lumpur",
-    "SYD":"Sydney","AUH":"Abu Dhabi","DOH":"Doha","IST":"Istanbul",
+
+# ── Airport database — city/name → IATA (bidirectional) ───────────────────────
+AIRPORTS = {
+    # India
+    "HYD": "Hyderabad (Rajiv Gandhi)",
+    "DEL": "Delhi (Indira Gandhi)",
+    "BOM": "Mumbai (Chhatrapati Shivaji)",
+    "BLR": "Bangalore (Kempegowda)",
+    "MAA": "Chennai (Anna International)",
+    "CCU": "Kolkata (Netaji Subhas Chandra Bose)",
+    "GOI": "Goa (Manohar International)",
+    "AMD": "Ahmedabad (Sardar Vallabhbhai Patel)",
+    "PNQ": "Pune (Lohegaon)",
+    "COK": "Kochi (Cochin International)",
+    "TRV": "Thiruvananthapuram (Trivandrum)",
+    "IXC": "Chandigarh",
+    "JAI": "Jaipur (Sanganeer)",
+    "LKO": "Lucknow (Chaudhary Charan Singh)",
+    "PAT": "Patna (Jay Prakash Narayan)",
+    "BHO": "Bhopal (Raja Bhoj)",
+    "NAG": "Nagpur (Dr. Babasaheb Ambedkar)",
+    "IDR": "Indore (Devi Ahilyabai Holkar)",
+    "VTZ": "Visakhapatnam",
+    "VGA": "Vijayawada",
+    "TIR": "Tirupati",
+    "SXR": "Srinagar",
+    "IXB": "Bagdogra (Siliguri)",
+    "GAU": "Guwahati (Lokpriya Gopinath Bordoloi)",
+    "IXZ": "Port Blair (Veer Savarkar)",
+    "UDR": "Udaipur (Maharana Pratap)",
+    "ATQ": "Amritsar (Sri Guru Ram Dass Jee)",
+    "VNS": "Varanasi (Lal Bahadur Shastri)",
+    "RPR": "Raipur (Swami Vivekananda)",
+    "BBI": "Bhubaneswar (Biju Patnaik)",
+    "IXM": "Madurai",
+    "CJB": "Coimbatore (PSG Airport)",
+    "TRZ": "Tiruchirappalli",
+    "HBX": "Hubli",
+    "MYQ": "Mysore",
+    "MNG": "Mangalore",
+    "KNU": "Kanpur",
+    # Middle East
+    "DXB": "Dubai International",
+    "AUH": "Abu Dhabi International",
+    "DOH": "Doha (Hamad International)",
+    "RUH": "Riyadh (King Khalid)",
+    "JED": "Jeddah (King Abdulaziz)",
+    "MCT": "Muscat International",
+    "KWI": "Kuwait International",
+    "BAH": "Bahrain International",
+    "SHJ": "Sharjah International",
+    # Southeast Asia
+    "SIN": "Singapore (Changi)",
+    "KUL": "Kuala Lumpur (KLIA)",
+    "BKK": "Bangkok (Suvarnabhumi)",
+    "DMK": "Bangkok (Don Mueang)",
+    "CGK": "Jakarta (Soekarno-Hatta)",
+    "MNL": "Manila (Ninoy Aquino)",
+    "SGN": "Ho Chi Minh City (Tan Son Nhat)",
+    "HAN": "Hanoi (Noi Bai)",
+    "RGN": "Yangon International",
+    "CMB": "Colombo (Bandaranaike)",
+    "DAC": "Dhaka (Hazrat Shahjalal)",
+    "KTM": "Kathmandu (Tribhuvan)",
+    # East Asia
+    "NRT": "Tokyo (Narita)",
+    "HND": "Tokyo (Haneda)",
+    "ICN": "Seoul (Incheon)",
+    "PEK": "Beijing (Capital)",
+    "PVG": "Shanghai (Pudong)",
+    "HKG": "Hong Kong International",
+    "TPE": "Taipei (Taoyuan)",
+    "CAN": "Guangzhou (Baiyun)",
+    # Europe
+    "LHR": "London (Heathrow)",
+    "LGW": "London (Gatwick)",
+    "CDG": "Paris (Charles de Gaulle)",
+    "ORY": "Paris (Orly)",
+    "FRA": "Frankfurt International",
+    "AMS": "Amsterdam (Schiphol)",
+    "MAD": "Madrid (Barajas)",
+    "BCN": "Barcelona (El Prat)",
+    "FCO": "Rome (Fiumicino)",
+    "MXP": "Milan (Malpensa)",
+    "ZRH": "Zurich International",
+    "VIE": "Vienna International",
+    "BRU": "Brussels International",
+    "CPH": "Copenhagen (Kastrup)",
+    "ARN": "Stockholm (Arlanda)",
+    "HEL": "Helsinki (Vantaa)",
+    "OSL": "Oslo (Gardermoen)",
+    "IST": "Istanbul (New Airport)",
+    "SAW": "Istanbul (Sabiha Gokcen)",
+    "ATH": "Athens (Eleftherios Venizelos)",
+    "LIS": "Lisbon (Humberto Delgado)",
+    # Americas
+    "JFK": "New York (JFK)",
+    "EWR": "New York (Newark)",
+    "LAX": "Los Angeles International",
+    "ORD": "Chicago (O'Hare)",
+    "MIA": "Miami International",
+    "SFO": "San Francisco International",
+    "DFW": "Dallas Fort Worth",
+    "YYZ": "Toronto (Pearson)",
+    "GRU": "São Paulo (Guarulhos)",
+    "MEX": "Mexico City (Benito Juárez)",
+    # Oceania & Africa
+    "SYD": "Sydney (Kingsford Smith)",
+    "MEL": "Melbourne (Tullamarine)",
+    "BNE": "Brisbane International",
+    "PER": "Perth International",
+    "JNB": "Johannesburg (OR Tambo)",
+    "CPT": "Cape Town International",
+    "NBO": "Nairobi (Jomo Kenyatta)",
+    "CAI": "Cairo International",
+    "CMN": "Casablanca (Mohammed V)",
 }
+
+# Reverse: city name keywords → IATA
+def city_to_iata(query):
+    """Return (IATA, full_name) or None. Matches on city name, airport name, or IATA code."""
+    q = query.strip().upper()
+    # Direct IATA match
+    if q in AIRPORTS:
+        return q, AIRPORTS[q]
+    # Search by keyword in name
+    ql = query.strip().lower()
+    for code, name in AIRPORTS.items():
+        if ql in name.lower() or ql in code.lower():
+            return code, name
+    return None
+
+def airport_selectbox(label, key, default_code=""):
+    """Search box that accepts city name or IATA and resolves to IATA."""
+    # Build display list: "HYD — Hyderabad (Rajiv Gandhi)"
+    options = [f"{code} — {name}" for code, name in AIRPORTS.items()]
+    default_idx = 0
+    if default_code and default_code in AIRPORTS:
+        default_idx = list(AIRPORTS.keys()).index(default_code)
+    chosen = st.selectbox(label, options, index=default_idx, key=key)
+    return chosen.split(" — ")[0]  # return just the IATA code
 
 # ── CSS ────────────────────────────────────────────────────────────────────────
 st.markdown("""
@@ -614,20 +785,20 @@ with tab_search:
         cabin = T.get("cabin_api_map", {}).get(cabin_display, cabin_display)
 
     default_o, default_d = POPULAR[quick]
-    c1, c2, c3, c4 = st.columns([1.2, 1.2, 1.1, 0.7])
+    c1, c2, c3, c4 = st.columns([1.5, 1.5, 1.1, 0.7])
     with c1:
-        origin = st.text_input(T["from_label"], value=default_o, placeholder=T["from_placeholder"]).strip().upper()
+        origin = airport_selectbox(T["from_label"], "origin_select", default_o or "HYD")
     with c2:
-        destination = st.text_input(T["to_label"], value=default_d, placeholder=T["to_placeholder"]).strip().upper()
+        destination = airport_selectbox(T["to_label"], "dest_select", default_d or "DXB")
     with c3:
         depart_date = st.date_input(T["date_label"], value=date.today() + timedelta(days=7), min_value=date.today())
     with c4:
         adults = st.number_input(T["passengers_label"], min_value=1, max_value=9, value=1)
 
     if origin and destination:
-        ho = IATA_HINT.get(origin, "?")
-        hd = IATA_HINT.get(destination, "?")
-        st.caption(f"📍 {origin} = {ho}   →   {destination} = {hd}")
+        ho = AIRPORTS.get(origin, origin)
+        hd = AIRPORTS.get(destination, destination)
+        st.caption(f"📍 {ho}   →   {hd}")
 
     search_clicked = st.button(T["search_btn"])
     st.markdown('</div>', unsafe_allow_html=True)
@@ -639,8 +810,6 @@ with tab_search:
             st.error(T["err_no_model"]); st.stop()
         if not origin or not destination:
             st.error(T["err_no_iata"]); st.stop()
-        if len(origin) != 3 or len(destination) != 3:
-            st.error(T["err_iata_len"]); st.stop()
         if origin == destination:
             st.error(T["err_same"]); st.stop()
 
