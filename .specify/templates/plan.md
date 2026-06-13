@@ -1,26 +1,23 @@
-# Plan Template — Technical Blueprint
+# Plan: [Feature Name]
 
-## Architecture Diagram
-```
-[Draw ASCII diagram here]
-```
+## Summary
+Brief plan summary.
 
-## Key Functions / Components
+## Timeline
+| Phase | Description | Duration |
+|-------|-------------|----------|
+| 1     | Research    | 1 day    |
+| 2     | Build       | 2 days   |
+| 3     | Test        | 1 day    |
 
-| Name | Purpose |
-|---|---|
-| `function_name()` | Description |
+## Tasks
+- [ ] Task 1
+- [ ] Task 2
+- [ ] Task 3
 
-## Tech Stack
+## Dependencies
+- Dependency 1
 
-| Layer | Technology | Version |
-|---|---|---|
-| | | |
-
-## Data Flow
-[Describe how data moves through the system]
-
-## Error Handling
-| Scenario | Handling |
-|---|---|
-| | |
+## Success Criteria
+- Criterion 1
+- Criterion 2

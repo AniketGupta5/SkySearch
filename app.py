@@ -15,7 +15,7 @@ SCOPES     = ["https://www.googleapis.com/auth/spreadsheets"]
 
 @st.cache_resource
 def get_sheets_service():
-    info = dict(st.secrets["gcp_service_account"])
+    info = {}
     info["private_key"] = info["private_key"].replace("\\n", "\n")
     creds = service_account.Credentials.from_service_account_info(info, scopes=SCOPES)
     return build("sheets", "v4", credentials=creds)
@@ -764,10 +764,8 @@ with st.sidebar:
 
     if is_groq:
         # Key loaded from Streamlit secrets or environment variable
-        groq_key = st.secrets.get("GROQ_API_KEY", "") or os.environ.get("GROQ_API_KEY", "")
+        groq_key = "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"
         groq_model = st.selectbox(T["groq_model_label"], GROQ_MODELS)
-        if not groq_key:
-            st.warning("⚠️ No Groq API key configured. Add it to Streamlit secrets.")
         backend_cfg = {
             "backend": "groq",
             "groq_key": groq_key,

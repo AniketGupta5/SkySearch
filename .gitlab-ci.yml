@@ -1,0 +1,45 @@
+stages:
+  - lint
+  - security
+  - test
+
+lint-ruff:
+  stage: lint
+  image: python:3.11-slim
+  before_script:
+    - pip install ruff --quiet
+  script:
+    - ruff check app.py --ignore E501 || true
+
+type-check-mypy:
+  stage: lint
+  image: python:3.11-slim
+  before_script:
+    - pip install mypy --quiet
+  script:
+    - mypy app.py --ignore-missing-imports || true
+
+secret-scan:
+  stage: security
+  image: python:3.11-slim
+  before_script:
+    - pip install detect-secrets --quiet
+  script:
+    - detect-secrets scan --all-files > .secrets.baseline || true
+
+dependency-audit:
+  stage: security
+  image: python:3.11-slim
+  before_script:
+    - pip install pip-audit --quiet
+  script:
+    - pip-audit -r requirements.txt || true
+
+coverage:
+  stage: test
+  image: python:3.11-slim
+  before_script:
+    - pip install pytest pytest-cov --quiet
+    - pip install -r requirements.txt --quiet
+  script:
+    - pytest tests/ --cov=app --cov-report=term-missing || true

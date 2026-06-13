@@ -1,15 +1,14 @@
-# Tasks Template
+# Tasks: [Feature Name]
 
-## Status Legend
-- [x] Done  
-- [ ] Todo  
-- [~] In Progress
+## Backlog
+- [ ] Task 1
+- [ ] Task 2
 
-## Phase 1 · MVP
-- [ ] T-001 · 
+## In Progress
+- [ ] Task 3
 
-## Phase 2 · Enhancements
-- [ ] T-XXX · 
+## Done
+- [x] Task 4
 
-## Phase 3 · Polish
-- [ ] T-XXX · 
+## Notes
+Additional notes here.

@@ -1,20 +1,26 @@
-# Spec Template
+# Spec: [Feature Name]
 
 ## Overview
-[One paragraph describing what this feature/module does and why it exists]
+Brief description of the feature.
 
-## User Stories
+## Goals
+- Goal 1
+- Goal 2
 
-### US-XXX · [Story Title]
-**As a** [user type],  
-**I want to** [action],  
-**So that** [outcome].
+## Non-Goals
+- Non-goal 1
 
-**Acceptance Criteria:**
-- [ ] Criterion 1
-- [ ] Criterion 2
+## Requirements
+### Functional
+- Requirement 1
+- Requirement 2
 
-## Non-Functional Requirements
-- Performance: 
-- Error handling:
-- Accessibility:
+### Non-Functional
+- Performance requirement
+- Security requirement
+
+## Design
+Description of the design approach.
+
+## Risks
+- Risk 1 and mitigation
