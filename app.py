@@ -5,24 +5,66 @@ import re
 import os
 import uuid
 from datetime import date, timedelta, datetime
+from google.oauth2 import service_account
+from googleapiclient.discovery import build
 
-# ── Reviews storage (JSON file — works locally and on Streamlit Cloud) ─────────
-REVIEWS_FILE = "reviews.json"
+# ── Google Sheets config ───────────────────────────────────────────────────────
+SHEET_ID   = "1kgpF77blGk_WUBiSV2UMl_hxiDiCYnLEvO1labpdAeY"
+SHEET_NAME = "Sheet1"
+SCOPES     = ["https://www.googleapis.com/auth/spreadsheets"]
+
+@st.cache_resource
+def get_sheets_service():
+    info = dict(st.secrets["gcp_service_account"])
+    info["private_key"] = info["private_key"].replace("\\n", "\n")
+    creds = service_account.Credentials.from_service_account_info(info, scopes=SCOPES)
+    return build("sheets", "v4", credentials=creds)
 
 def load_reviews():
-    if os.path.exists(REVIEWS_FILE):
-        try:
-            with open(REVIEWS_FILE, "r", encoding="utf-8") as f:
-                return json.load(f)
-        except Exception:
-            return []
-    return []
+    try:
+        service = get_sheets_service()
+        result = service.spreadsheets().values().get(
+            spreadsheetId=SHEET_ID,
+            range=f"{SHEET_NAME}!A2:I1000"
+        ).execute()
+        rows = result.get("values", [])
+        reviews = []
+        for row in rows:
+            while len(row) < 9:
+                row.append("")
+            reviews.append({
+                "id":        row[0],
+                "name":      row[1],
+                "city":      row[2],
+                "rating":    int(row[3]) if str(row[3]).isdigit() else 5,
+                "liked":     row[4],
+                "improve":   row[5],
+                "would_use": row[6] == "True",
+                "timestamp": row[7],
+                "lang":      row[8],
+            })
+        return list(reversed(reviews))
+    except Exception as e:
+        return []
 
 def save_review(review: dict):
-    reviews = load_reviews()
-    reviews.insert(0, review)  # newest first
-    with open(REVIEWS_FILE, "w", encoding="utf-8") as f:
-        json.dump(reviews, f, ensure_ascii=False, indent=2)
+    try:
+        service = get_sheets_service()
+        row = [[
+            review["id"], review["name"], review["city"],
+            str(review["rating"]), review["liked"], review["improve"],
+            str(review["would_use"]), review["timestamp"], review["lang"],
+        ]]
+        service.spreadsheets().values().append(
+            spreadsheetId=SHEET_ID,
+            range=f"{SHEET_NAME}!A:I",
+            valueInputOption="RAW",
+            insertDataOption="INSERT_ROWS",
+            body={"values": row}
+        ).execute()
+    except Exception as e:
+        st.error(f"Could not save review: {e}")
+
 
 # ── Page config ────────────────────────────────────────────────────────────────
 st.set_page_config(
