@@ -5,3 +5,4 @@ pytest-cov>=5.0.0
 ruff>=0.4.4
 mypy>=1.10.0
 google-auth
+google-api-python-client
