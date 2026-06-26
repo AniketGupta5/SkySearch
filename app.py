@@ -1037,7 +1037,7 @@ with tab_reviews:
                     "liked":      r_liked.strip(),
                     "improve":    r_improve.strip(),
                     "would_use":  r_would_use == T["review_yes"],
-                    "timestamp":  datetime.now().strftime("%d %b %Y, %H:%M"),
+                    "timestamp":  (datetime.utcnow() + timedelta(hours=5, minutes=30)).strftime("%d %b %Y, %H:%M"),
                     "lang":       lang,
                 })
                 st.success(T["review_success"])
