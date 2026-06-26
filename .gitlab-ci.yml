@@ -5,6 +5,9 @@ stages:
   - build
   - deploy
 
+default:
+  image: python:3.11-slim
+
 lint-ruff:
   stage: lint
   before_script:
@@ -46,9 +49,6 @@ build:
   before_script:
     - pip install -r requirements.txt --quiet
   script:
-    - echo "Installing dependencies..."
-    - pip install -r requirements.txt
-    - echo "Verifying app syntax..."
     - python -c "import ast; ast.parse(open('app.py').read()); print('app.py syntax OK')"
     - echo "Build successful"
 
@@ -56,7 +56,6 @@ deploy:
   stage: deploy
   script:
     - echo "App is live at https://skysearch-mq5stdnqm2hady7uhpyuzh.streamlit.app/"
-    - echo "Deployment is managed by Streamlit Cloud via GitHub integration"
     - echo "Deploy stage complete"
   only:
     - main
