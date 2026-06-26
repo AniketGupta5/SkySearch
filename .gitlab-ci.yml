@@ -2,10 +2,11 @@ stages:
   - lint
   - security
   - test
+  - build
+  - deploy
 
 lint-ruff:
   stage: lint
-  image: python:3.11-slim
   before_script:
     - pip install ruff --quiet
   script:
@@ -13,7 +14,6 @@ lint-ruff:
 
 type-check-mypy:
   stage: lint
-  image: python:3.11-slim
   before_script:
     - pip install mypy --quiet
   script:
@@ -21,7 +21,6 @@ type-check-mypy:
 
 secret-scan:
   stage: security
-  image: python:3.11-slim
   before_script:
     - pip install detect-secrets --quiet
   script:
@@ -29,7 +28,6 @@ secret-scan:
 
 dependency-audit:
   stage: security
-  image: python:3.11-slim
   before_script:
     - pip install pip-audit --quiet
   script:
@@ -37,9 +35,28 @@ dependency-audit:
 
 coverage:
   stage: test
-  image: python:3.11-slim
   before_script:
     - pip install pytest pytest-cov --quiet
     - pip install -r requirements.txt --quiet
   script:
     - pytest tests/ --cov=app --cov-report=term-missing || true
+
+build:
+  stage: build
+  before_script:
+    - pip install -r requirements.txt --quiet
+  script:
+    - echo "Installing dependencies..."
+    - pip install -r requirements.txt
+    - echo "Verifying app syntax..."
+    - python -c "import ast; ast.parse(open('app.py').read()); print('app.py syntax OK')"
+    - echo "Build successful"
+
+deploy:
+  stage: deploy
+  script:
+    - echo "App is live at https://skysearch-mq5stdnqm2hady7uhpyuzh.streamlit.app/"
+    - echo "Deployment is managed by Streamlit Cloud via GitHub integration"
+    - echo "Deploy stage complete"
+  only:
+    - main
