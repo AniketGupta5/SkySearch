@@ -15,7 +15,7 @@ SCOPES     = ["https://www.googleapis.com/auth/spreadsheets"]
 
 @st.cache_resource
 def get_sheets_service():
-    info = {}
+    info = dict(st.secrets["gcp_service_account"])
     info["private_key"] = info["private_key"].replace("\\n", "\n")
     creds = service_account.Credentials.from_service_account_info(info, scopes=SCOPES)
     return build("sheets", "v4", credentials=creds)
